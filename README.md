@@ -11,3 +11,4 @@ Personal notes on Linux, security research, and CTF writeups.
 | [path-hijacking-permissions.md](path-hijacking-permissions.md) | PATH hijacking & file permissions |
 | [ownership-groups-suid.md](ownership-groups-suid.md) | File ownership, groups & SUID |
 | [os-architecture-secure-boot.md](os-architecture-secure-boot.md) | OS architecture & secure boot |
+| [processes-jobs.md](processes-jobs.md) | Processes, signals, fg/bg & exit codes |
