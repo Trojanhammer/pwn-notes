@@ -1,6 +1,6 @@
 # pwn-notes
 
-Personal notes on Linux, security research, and CTF writeups.
+Personal notes on Linux, security research, and CTF writeups. Currently deep diving into low-level systems through pwn.college.
 
 ## Contents
 
@@ -14,3 +14,4 @@ Personal notes on Linux, security research, and CTF writeups.
 | [processes-jobs.md](processes-jobs.md) | Processes, signals, fg/bg & exit codes |
 | [x86-assembly-basics.md](x86-assembly-basics.md) | x86-64 assembly, registers, syscalls & build flow |
 | [memory-dereferencing.md](memory-dereferencing.md) | RAM layout, virtual memory & dereferencing |
+| [stack-heap-registers.md](stack-heap-registers.md) | Stack, heap, rsp, push/pop & program arguments |
