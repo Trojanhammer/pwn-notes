@@ -98,8 +98,10 @@ Address    Contents                   Address    Contents
 ```
 
 ### `push` vs `pop`
-* **`push rax`** — `rsp - 8` dulu (stack grows down!), then write `rax` into `[rsp]`
-* **`pop rdi`** — read `[rsp]` into `rdi`, then `rsp + 8`
+* **`push rax`** — tambah item ke stack: `rsp - 8` dulu (grows down), then write `rax` into `[rsp]`
+* **`pop rdi`** — ambil & buang item dari stack: read `[rsp]` into `rdi`, then `rsp + 8` (shrink balik)
+
+Sebab stack grows down, **buang item = `rsp` naik (+8)** ke address lebih tinggi. Push = turun, pop = naik.
 
 ```asm
 .intel_syntax noprefix

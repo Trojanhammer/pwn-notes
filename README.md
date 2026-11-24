@@ -15,3 +15,4 @@ Personal notes on Linux, security research, and CTF writeups. Currently deep div
 | [x86-assembly-basics.md](x86-assembly-basics.md) | x86-64 assembly, registers, syscalls & build flow |
 | [memory-dereferencing.md](memory-dereferencing.md) | RAM layout, virtual memory & dereferencing |
 | [stack-heap-registers.md](stack-heap-registers.md) | Stack, heap, rsp, push/pop & program arguments |
+| [hex-negative-numbers.md](hex-negative-numbers.md) | Hex, binary conversion & two's complement |
