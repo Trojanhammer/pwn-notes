@@ -165,6 +165,44 @@ Conditional jumps (`je`, `jne`) boleh slow down CPU (*branch misprediction*). Mo
 
 ---
 
+## 8. Walking Pointer Pattern
+Common pattern dalam loops — rdi jalan satu-satu through string sambil rsi count.
+
+```asm
+mov rdi, [rsp+16]   # rdi = address of first argument (argv[1])
+mov rsi, 0          # rsi = counter = 0
+```
+
+`[rsp+16]` holds the **address** of the string, bukan string tu sendiri. So lepas `mov rdi, [rsp+16]`, rdi = something like `0x7fffffffed60`.
+
+```text
+STACK                          MEMORY
+─────────────────────          ──────────────────────────────────────────
+[rsp]    │   3        │  argc
+[rsp+8]  │ 0xed40     │ ──────────────────────────► "/tmp/prog\0"
+[rsp+16] │ 0xed60     │ ──┐  ← rdi = 0xed60
+─────────────────────     │
+                          │
+                          ▼
+                     0xed60  0xed61  0xed62  0xed63  0xed64  0xed65
+                    ┌───────┬───────┬───────┬───────┬───────┬───────┐
+                    │  'h'  │  'e'  │  'l'  │  'l'  │  'o'  │  \0  │
+                    │ 0x68  │ 0x65  │ 0x6c  │ 0x6c  │ 0x6f  │ 0x00 │
+                    └───────┴───────┴───────┴───────┴───────┴───────┘
+                       ▲
+                       rdi starts here, walks →→→→→→→→→→→→→→→→→→ until \0
+
+LOOP TRACE:
+iter 1: rdi=0xed60  [rdi]='h'  rsi: 0→1   inc rdi →
+iter 2: rdi=0xed61  [rdi]='e'  rsi: 1→2   inc rdi →
+iter 3: rdi=0xed62  [rdi]='l'  rsi: 2→3   inc rdi →
+iter 4: rdi=0xed63  [rdi]='l'  rsi: 3→4   inc rdi →
+iter 5: rdi=0xed64  [rdi]='o'  rsi: 4→5   inc rdi →
+iter 6: rdi=0xed65  [rdi]=0x00 ──────────────────── je exit_loop ✓ (rsi = 5)
+```
+
+rdi = **walking pointer** (jalan char by char), rsi = **counter** (berapa langkah = panjang string).
+
 ## 8. Recognizing Loops
 Loop berlaku bila ada instruction yang **jump backwards** — repeat the same operation. Asas kepada `for` dan `while`.
 

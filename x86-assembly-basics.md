@@ -13,6 +13,32 @@ CPU kena angkut data dari RAM ke register dulu before boleh process apa-apa. Reg
 
 `mov dst, src` bukan "pindah" — dia **copy** nilai dari kanan ke kiri. Nilai asal kekal tak hilang.
 
+### Register Sizes — Pecahan RAX & RBX
+64-bit register dipecah kepada bahagian kecil supaya boleh load data 1 byte without touching yang lain:
+
+```text
+RAX (8 bytes / 64-bit)
+└── EAX (4 bytes / 32-bit)
+    └── AX (2 bytes / 16-bit)
+        ├── AH (1 byte — high)
+        └── AL (1 byte — low)  ← 1 byte paling bawah
+```
+
+* `RAX → EAX → AX → AL` (1 byte hujung bagi RAX)
+* `RBX → EBX → BX → BL` (1 byte hujung bagi RBX)
+* `RDI → EDI → DI → DIL`
+* `RSI → ESI → SI → SIL`
+
+Sebab tu dalam Assembly kau nampak `al` dan `bl` bila deal dengan single bytes (cth: characters) — diorang ni subset of `rax` dan `rbx`, bukan registers lain.
+
+```asm
+mov rax, 0x1234567890abcdef   # rax = full 64-bit
+# eax = 0x90abcdef (lower 32 bits)
+# ax  = 0xcdef     (lower 16 bits)
+# al  = 0xef       (lowest byte)
+# ah  = 0xcd       (second lowest byte)
+```
+
 ### Registers Penting (Syscall & Arguments)
 * **`rax`** — syscall number (cth: `60` = `sys_exit`) atau return value
 * **`rdi`** — argument ke-1
