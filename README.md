@@ -17,3 +17,4 @@ Personal notes on Linux, security research, and CTF writeups. Currently deep div
 | [stack-heap-registers.md](stack-heap-registers.md) | Stack, heap, rsp, push/pop & program arguments |
 | [hex-negative-numbers.md](hex-negative-numbers.md) | Hex, binary conversion & two's complement |
 | [gdb-introspection.md](gdb-introspection.md) | objdump, strace & GDB for runtime analysis |
+| [control-flow-comparisons.md](control-flow-comparisons.md) | cmp, jumps, loops, arrays of pointers & full examples |
